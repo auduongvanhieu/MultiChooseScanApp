@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import React, { FC, useEffect, useState } from "react";
+import React, { FC, useEffect, useState, useRef } from "react";
 import { DeviceEventEmitter, Platform, View, ViewStyle } from "react-native";
 import { AppStackScreenProps } from "../navigators"; // @demo remove-current-line
 import { colors } from "../theme";
@@ -11,16 +11,16 @@ export const ScanMultiChooseByCameraScreen: FC<ScanMultiChooseByCameraScreenProp
   _props,
 ) {
 
-  const [overlayMat, setOverlayMat] = useState(null);
-  var cvCamera = null;
+  var overlayMat = null;
+  var cvCamera: any = useRef();
   const [interMat, setInterMat] = useState(null);
   const [circlesMat, setCirclesMat] = useState(null);
 
   useEffect(() => {
     DeviceEventEmitter.addListener('onPayload', onPayload)
     DeviceEventEmitter.addListener('onFrameSize', onFrameSize)
-    cvCamera = React.createRef()
     onRefesh()
+    console.log('hieunv', 'ScanMultiChooseByCameraScreen');
   }, [])
 
   const onRefesh = async () => {
@@ -33,23 +33,21 @@ export const ScanMultiChooseByCameraScreen: FC<ScanMultiChooseByCameraScreenProp
   const onFrameSize = async (e) => {
     if (!overlayMat) {
       const { frameWidth, frameHeight } = JSON.parse((Platform.OS === 'ios') ? e.nativeEvent.payload : e.payload).frameSize
-      let overlayMat
       if (Platform.OS === 'ios') { // portrait
         overlayMat = await new Mat(frameHeight, frameWidth, CvType.CV_8UC4).init()
       }
       else { // landscape or portrait
-        overlayMat = await new Mat(frameHeight, frameWidth, CvType.CV_8UC4).init()
+        overlayMat = await new Mat(frameWidth, frameHeight, CvType.CV_8UC4).init()
       }
-      setOverlayMat(overlayMat)
+      // setOverlayMat(overlayMat)
     }
   }
 
   const onPayload = async (e) => {
     //alert('Entered onPayload e is: ' + JSON.stringify(e))
     const circles = (Platform.OS === 'ios') ? e.nativeEvent.payload : e.payload
-
+    console.log('hieunv', 'overlayMat', overlayMat);
     if (overlayMat) {
-
       overlayMat.setTo(CvScalar.all(0))
       const scalar1 = new CvScalar(255, 0, 255, 255)
       const scalar2 = new CvScalar(255, 255, 0, 255)
@@ -57,6 +55,7 @@ export const ScanMultiChooseByCameraScreen: FC<ScanMultiChooseByCameraScreenProp
       for (let i = 0; i < circles.length; i += 3) {
         const center = new CvPoint(Math.round(circles[i]), Math.round(circles[i + 1]))
         const radius = Math.round(circles[i + 2])
+        console.log('hieunv', 'center', center);
         RNCv.invokeMethod("circle", { "p1": overlayMat, "p2": center, "p3": 3, "p4": scalar1, "p5": 3, "p6": 8, "p7": 0 })
         RNCv.invokeMethod("circle", { "p1": overlayMat, "p2": center, "p3": radius, "p4": scalar2, "p5": 10, "p6": 8, "p7": 0 })
       }
